@@ -208,7 +208,7 @@ export default function RosterScreen() {
                 ))}
               </View>
             )}
-            <Text style={styles.sectionTitle}>Bench</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Bench</Text>
             {benchProfiles.length === 0 ? (
               <Text style={styles.emptySectionText}>No bench players</Text>
             ) : (
@@ -289,8 +289,8 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 0,
+    marginBottom: 4,
     gap: 12,
   },
   searchBar: {
@@ -358,8 +358,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik-Bold',
     fontSize: 22,
     color: Colors.white,
-    marginTop: 24,
-    marginBottom: 8,
+    marginTop: 4,
+    marginBottom: 16,
     marginLeft: 16,
   },
   emptySectionText: {

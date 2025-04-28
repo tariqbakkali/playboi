@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, Heart, DollarSign, Star, Siren as Fire, Calendar, Pen } from 'lucide-react-native';
@@ -51,6 +51,10 @@ export default function PlayerDetailsScreen() {
   const [upcomingDates, setUpcomingDates] = useState<UpcomingDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recapVisible, setRecapVisible] = useState(false);
+  const [recapLoading, setRecapLoading] = useState(false);
+  const [recapError, setRecapError] = useState<string | null>(null);
+  const [recapText, setRecapText] = useState('');
 
   if (!id) {
     return (
@@ -86,10 +90,9 @@ export default function PlayerDetailsScreen() {
     try {
       setLoading(true);
       setError(null);
-      
       const [playerData, meetingsData, upcomingDatesData] = await Promise.all([
-        getProfile(id),
-        getMeetings(id),
+        getProfile(id as string),
+        getMeetings(id as string), 
         getUpcomingDates()
       ]);
 
@@ -111,10 +114,39 @@ export default function PlayerDetailsScreen() {
 
   function handleEdit() {
     if (!player) return;
-    router.push({
-      pathname: `/roster/${id}/edit`,
-      params: { initialData: JSON.stringify(player) }
-    });
+    const initialData = encodeURIComponent(JSON.stringify(player));
+    router.push(`/roster/${id}/edit?initialData=${initialData}` as const);
+  }
+
+  async function handleRecap() {
+    setRecapVisible(true);
+    setRecapLoading(true);
+    setRecapError(null);
+    try {
+      // Compose prompt from player and meetings
+      const prompt = `Give me a quick, friendly summary of this person for a pre-date recap.\n\nProfile: ${player?.name}, Status: ${player?.status}, Likes: ${player?.likes?.join(', ')}, Dislikes: ${player?.dislikes?.join(', ')}, Notes: ${player?.notes}\n\nRecent Meetings:\n${meetings.slice(0, 5).map(m => `- ${m.date}: ${m.notes || ''}`).join('\n')}`;
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant that summarizes dating profiles and recent notes for a quick pre-date recap.' },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: 200,
+        }),
+      });
+      const data = await response.json();
+      setRecapText(data.choices?.[0]?.message?.content || 'No summary available.');
+    } catch (err) {
+      setRecapError('Failed to fetch recap.');
+    } finally {
+      setRecapLoading(false);
+    }
   }
 
   if (error) {
@@ -192,8 +224,8 @@ export default function PlayerDetailsScreen() {
     (meetings.reduce((sum, m) => sum + (m.rating || 0), 0) / meetings.length) : 
     0;
   
-  const avgPerformanceRating = meetings.filter(m => m.performance_rating).length ? 
-    (meetings.reduce((sum, m) => sum + (m.performance_rating || 0), 0) / meetings.filter(m => m.performance_rating).length) : 
+  const avgPerformanceRating = meetings.filter(m => m.rating).length ? 
+    (meetings.reduce((sum, m) => sum + (m.rating || 0), 0) / meetings.filter(m => m.rating).length) : 
     0;
 
   // Calculate overall rating (1/3 of each rating type)
@@ -322,7 +354,12 @@ export default function PlayerDetailsScreen() {
         )}
 
         <View style={styles.factsCard}>
-          <Text style={styles.cardTitle}>Quick Facts</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.cardTitle}>Quick Facts</Text>
+            <TouchableOpacity style={{ backgroundColor: Colors.blue[500], borderRadius: 8, paddingVertical: 6, paddingHorizontal: 14 }} onPress={handleRecap}>
+              <Text style={{ color: 'white', fontFamily: 'DMSans-Bold', fontSize: 14 }}>Recap</Text>
+            </TouchableOpacity>
+          </View>
           {player.likes?.length > 0 && (
             <Text style={styles.factText}>❤️ Likes: {player.likes.join(', ')}</Text>
           )}
@@ -334,47 +371,72 @@ export default function PlayerDetailsScreen() {
           )}
         </View>
 
+        <Modal
+          visible={recapVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setRecapVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: Colors.secondary[300], borderRadius: 16, padding: 24, width: '85%' }}>
+              <Text style={{ fontFamily: 'Rubik-Bold', fontSize: 18, color: Colors.white, marginBottom: 12 }}>AI Recap</Text>
+              {recapLoading ? (
+                <ActivityIndicator color={Colors.primary[500]} size="large" />
+              ) : recapError ? (
+                <Text style={{ color: Colors.red[500] }}>{recapError}</Text>
+              ) : (
+                <Text style={{ color: Colors.white, fontFamily: 'DMSans-Regular', fontSize: 16 }}>{recapText}</Text>
+              )}
+              <TouchableOpacity style={{ marginTop: 20, alignSelf: 'flex-end' }} onPress={() => setRecapVisible(false)}>
+                <Text style={{ color: Colors.blue[500], fontFamily: 'DMSans-Bold', fontSize: 16 }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         <View style={styles.meetingsCard}>
-          <Text style={styles.cardTitle}>Recent Meetings / Gifts</Text>
+          <Text style={styles.cardTitle}>Meetings / Expense</Text>
           {meetings.length === 0 ? (
             <Text style={styles.emptyText}>No meetings or expenses yet</Text>
           ) : (
-            meetings.slice(0, 3).map((meeting) => (
-              <View key={meeting.id} style={styles.meetingRow}>
-                <View style={styles.meetingHeader}>
-                  <View style={styles.meetingInfo}>
-                    <Text style={styles.meetingDate}>
-                      {format(new Date(meeting.date), 'MMM d, yyyy')}
-                    </Text>
-                    <View style={styles.meetingType}>
-                      {meeting.type === 'expense' ? (
-                        <DollarSign size={14} color={Colors.white} />
-                      ) : (
-                        <Calendar size={14} color={Colors.white} />
+            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={true}>
+              {meetings.map((meeting) => (
+                <View key={meeting.id} style={styles.meetingRow}>
+                  <View style={styles.meetingHeader}>
+                    <View style={styles.meetingInfo}>
+                      <Text style={styles.meetingDate}>
+                        {format(new Date(meeting.date), 'MMM d, yyyy')}
+                      </Text>
+                      <View style={styles.meetingType}>
+                        {meeting.type === 'expense' ? (
+                          <DollarSign size={14} color={Colors.white} />
+                        ) : (
+                          <Calendar size={14} color={Colors.white} />
+                        )}
+                        <Text style={styles.meetingTypeText}>{meeting.type}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.meetingStats}>
+                      {meeting.type !== 'expense' && meeting.base && (
+                        <Text style={styles.meetingStat}>
+                          {meeting.base === 'strikeout' ? '❌' : '🍑'}
+                        </Text>
                       )}
-                      <Text style={styles.meetingTypeText}>{meeting.type}</Text>
+                      {meeting.type === 'expense' ? (
+                        <Text style={styles.meetingAmount}>
+                          ${meeting.amount_spent}
+                        </Text>
+                      ) : (
+                        <Text style={styles.meetingScore}>{meeting.rating}/10</Text>
+                      )}
                     </View>
                   </View>
-                  <View style={styles.meetingStats}>
-                    {meeting.type !== 'expense' && meeting.base && (
-                      <Text style={styles.meetingStat}>
-                        {meeting.base === 'strikeout' ? '❌' : '🍑'}
-                      </Text>
-                    )}
-                    {meeting.type === 'expense' ? (
-                      <Text style={styles.meetingAmount}>
-                        ${meeting.amount_spent}
-                      </Text>
-                    ) : (
-                      <Text style={styles.meetingScore}>{meeting.rating}/10</Text>
-                    )}
-                  </View>
+                  {meeting.notes && (
+                    <Text style={styles.meetingSummary}>{meeting.notes}</Text>
+                  )}
                 </View>
-                {meeting.notes && (
-                  <Text style={styles.meetingSummary}>{meeting.notes}</Text>
-                )}
-              </View>
-            ))
+              ))}
+            </ScrollView>
           )}
         </View>
 

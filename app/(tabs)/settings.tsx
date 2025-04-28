@@ -77,23 +77,8 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: 'Security',
-      items: [
-        {
-          icon: <Shield size={22} color={Colors.green[500]} />,
-          title: 'Privacy',
-          rightElement: <ChevronRight size={20} color={Colors.gray[400]} />,
-        },
-      ],
-    },
-    {
       title: 'Other',
       items: [
-        {
-          icon: <Info size={22} color={Colors.blue[500]} />,
-          title: 'About',
-          rightElement: <ChevronRight size={20} color={Colors.gray[400]} />,
-        },
         {
           icon: <LogOut size={22} color={Colors.red[500]} />,
           title: 'Log Out',
@@ -194,26 +179,23 @@ export default function SettingsScreen() {
           <View key={index} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <TouchableOpacity 
-                  key={itemIndex}
-                  style={styles.settingItem}
-                  onPress={item.onPress}
-                >
-                  <View style={styles.settingItemLeft}>
+              {section.items.map((item, itemIndex) => {
+                const hasOnPress = typeof (item as any).onPress === 'function';
+                const isDanger = (item as any).isDanger;
+                const hasRightElement = (item as any).rightElement;
+                return (
+                  <TouchableOpacity 
+                    key={itemIndex}
+                    style={styles.settingItem}
+                    onPress={hasOnPress ? (item as any).onPress : undefined}
+                    disabled={!hasOnPress}
+                  >
                     {item.icon}
-                    <Text 
-                      style={[
-                        styles.settingItemTitle,
-                        item.isDanger && styles.dangerText
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-                  </View>
-                  {item.rightElement}
-                </TouchableOpacity>
-              ))}
+                    <Text style={[styles.settingTitle, isDanger ? styles.dangerText : null]}>{item.title}</Text>
+                    {hasRightElement ? (item as any).rightElement : null}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         ))}
@@ -359,11 +341,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  settingItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingItemTitle: {
+  settingTitle: {
     fontFamily: 'DMSans-Medium',
     fontSize: 16,
     color: Colors.white,

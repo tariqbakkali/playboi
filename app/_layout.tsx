@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack, Slot } from 'expo-router';
+import { Stack, Slot, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
@@ -16,11 +16,13 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
   useFrameworkReady();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -37,6 +39,15 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    (async () => {
+      const onboardingComplete = await AsyncStorage.getItem('onboardingComplete');
+      if (onboardingComplete !== 'true') {
+        router.replace('/onboarding/Page1');
+      }
+    })();
+  }, []);
 
   // Return null to keep splash screen visible while fonts load
   if (!fontsLoaded && !fontError) {

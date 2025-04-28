@@ -75,7 +75,7 @@ export default function LineupScreen() {
   async function pickChatImage() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
         quality: 1,
       });
@@ -205,11 +205,6 @@ export default function LineupScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header 
         title="Lineup" 
-        rightElement={
-          <TouchableOpacity onPress={() => console.log('Notification bell pressed')} style={{ padding: 4 }}>
-            <Bell size={22} color={Colors.white} />
-          </TouchableOpacity>
-        }
       />
       
       <ScrollView 
