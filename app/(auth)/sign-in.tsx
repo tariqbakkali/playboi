@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Button,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { signIn } from '@/lib/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -12,10 +21,18 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSignIn() {
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (loading) return;
+
     try {
       setLoading(true);
       setError(null);
       await signIn(email, password);
+      // Use replace to prevent going back to sign-in screen
       router.replace('/(tabs)');
     } catch (err) {
       setError('Invalid email or password');
@@ -33,9 +50,7 @@ export default function SignInScreen() {
           <Text style={styles.subtitle}>Sign in</Text>
         </View>
 
-        {error && (
-          <Text style={styles.errorText}>{error}</Text>
-        )}
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
