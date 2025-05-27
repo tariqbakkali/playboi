@@ -13,6 +13,8 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SplashScreen } from 'expo-router';
+import { Platform } from 'react-native';
+import Purchases from 'react-native-purchases';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -30,6 +32,42 @@ export default function RootLayout() {
     'Rubik-Medium': Rubik_500Medium,
     'Rubik-Bold': Rubik_700Bold,
   });
+
+  useEffect(() => {
+    const iosApiKey = process.env.EXPO_PUBLIC_RC_IOS;
+    const androidApiKey = process.env.EXPO_PUBLIC_RC_ANDROID;
+
+    const configureRevenueCat = async () => {
+      try {
+        if (Platform.OS === 'ios' && iosApiKey) {
+          Purchases.configure({ apiKey: iosApiKey });
+          console.log('Configured for iOS');
+        } else if (Platform.OS === 'android' && androidApiKey) {
+          Purchases.configure({ apiKey: androidApiKey });
+          console.log('Configured for Android');
+        } else {
+          console.warn('Missing RevenueCat API key');
+          return;
+        }
+
+        // Wait a moment to ensure it's properly set
+        setTimeout(async () => {
+          try {
+            const offerings = await Purchases.getOfferings();
+            console.log('Offerings:', offerings);
+          } catch (error) {
+            console.error('Error fetching offerings:', error);
+            console.log('RC iOS Key:', iosApiKey);
+            console.log('RC Android Key:', androidApiKey);
+          }
+        }, 1000);
+      } catch (err) {
+        console.error('RevenueCat config error:', err);
+      }
+    };
+
+    configureRevenueCat();
+  }, []);
 
   // Handle hiding the splash screen after fonts are loaded
   useEffect(() => {

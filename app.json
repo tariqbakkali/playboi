@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tariqbakkali.soccer-lineup-manager"
+      "bundleIdentifier": "com.tariqbakkali.soccer-lineup-manager",
+      "appleTeamId": "WL6AYGAW36"
     },
     "web": {
       "bundler": "metro",
