@@ -13,6 +13,7 @@ import { router, usePathname } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { signIn } from '@/lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Purchases from 'react-native-purchases';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -33,7 +34,14 @@ export default function SignInScreen() {
       setError(null);
       await signIn(email, password);
       // Use replace to prevent going back to sign-in screen
-      router.replace('/(tabs)');
+      const customerInfo = await Purchases.getCustomerInfo();
+      const isSubscribed = Object.values(customerInfo.entitlements.active).length > 0;
+      
+      if (isSubscribed) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/paywall'); // 👈 Block access until subscribed
+      }
     } catch (err) {
       setError('Invalid email or password');
       console.error('Sign in error:', err);

@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { signUp } from '@/lib/auth';
+import Purchases from 'react-native-purchases';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -16,7 +24,16 @@ export default function SignUpScreen() {
       setLoading(true);
       setError(null);
       await signUp(email, password);
-      router.replace('/(tabs)');
+
+      const customerInfo = await Purchases.getCustomerInfo();
+      const isSubscribed =
+        Object.values(customerInfo.entitlements.active).length > 0;
+
+      if (isSubscribed) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/paywall'); // 👈 Block access until subscribed
+      }
     } catch (err) {
       setError('Failed to create account. Please try again.');
       console.error('Sign up error:', err);
@@ -29,11 +46,11 @@ export default function SignUpScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Sign up to start managing your roster</Text>
+        <Text style={styles.subtitle}>
+          Sign up to start managing your roster
+        </Text>
 
-        {error && (
-          <Text style={styles.errorText}>{error}</Text>
-        )}
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
@@ -77,7 +94,9 @@ export default function SignUpScreen() {
             style={styles.linkButton}
             onPress={() => router.push('/sign-in')}
           >
-            <Text style={styles.linkText}>Already have an account? Sign In</Text>
+            <Text style={styles.linkText}>
+              Already have an account? Sign In
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
